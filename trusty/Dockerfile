@@ -3,6 +3,13 @@ FROM ubuntu:14.04
 
 MAINTAINER pete.nelson@unitedlex.com
 
+# only need this if we're using the internal MongoDB install
+# recommend using a separate mongo container and linking to it
+VOLUME /data/db
+
+# http and https
+EXPOSE 80 443
+
 # needed so runit will install correctly
 RUN touch /etc/inittab
 
@@ -95,27 +102,25 @@ RUN cd /setup \
  && cd /setup/ushlex-0.99 \
  && python ./setup.py install
 
-# download the main and plugin repositories from github
+# download the main repository and plugin repository from github
 RUN cd /setup \
  # TODO: download tarballs from github instead of clone (can also remove git install above then)
- && git clone https://github.com/crits/crits \
  && git clone https://github.com/crits/crits_services \
+ && rm -r crits_services/.git \
+ && cd /data \
+ && git clone https://github.com/crits/crits
  #TODO: figure out how to delete git structure in crits without webapp complaining
- && rm -r crits_services/.git
 
 #TODO: install appropriate services
 
-# configure the webapp
-RUN mkdir -p /data/db \
- && mv /setup/crits /data/ \
- && cd /data/crits/crits/config \
- && cp database_example.py database.py
+RUN mkdir -p /data/db /data/crits/crits/logs /data/service \
+ #TODO: figure out which crits.log is actually used
+ && touch /data/crits/logs/crits.log /data/crits/crits/logs/crits.log \
+ && cp /data/crits/crits/config/database_example.py /data/crits/crits/config/database.py
 
 # adjust users and permissions
-RUN useradd crits && chgrp -R crits /data/crits \
- && touch /data/crits/logs/crits.log \
+RUN useradd crits -G www-data && chgrp -R crits /data/crits \
  && chmod 664 /data/crits/logs/crits.log \
- && usermod -aG www-data crits \
  && chown -R www-data /data/crits
 
 # the apache2 run script takes care of starting mongo and cron first if needed
@@ -123,12 +128,5 @@ ADD apache/ /etc/service/apache/
 ADD runit_bootstrap /usr/sbin/
 RUN chmod +x /etc/service/apache/run /etc/service/apache/mongo/run /etc/service/apache/cron/run /usr/sbin/runit_bootstrap
 
-# only need this if we're using the internal MongoDB install
-# recommend using a separate mongo container and linking to it
-VOLUME /data/db
-
-EXPOSE 443
-EXPOSE 80
-
 ENTRYPOINT ["/usr/sbin/runit_bootstrap"]
-CMD ["help"]
+#CMD ["help"]

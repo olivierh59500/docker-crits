@@ -109,8 +109,7 @@ RUN cd /setup \
 RUN mkdir -p /data/db \
  && mv /setup/crits /data/ \
  && cd /data/crits/crits/config \
- && cp database_example.py database.py \
- && sed -i -e "1iimport sys; sys.path.append('/data/crits')" /data/crits/django.wsgi
+ && cp database_example.py database.py
 
 # adjust users and permissions
 RUN useradd crits && chgrp -R crits /data/crits \

@@ -68,6 +68,9 @@ if [ "$ROTATE_SECRET_KEY" = "true" ]; then
 	sed -i -e "s/SECRET_KEY = '.*/SECRET_KEY = '$SECRET_KEY'/" /data/crits/crits/config/database.py
 fi
 
+# avoids the ImportError when trying to launch the webapp
+export PYTHONPATH=/data/crits
+
 if [ "$INIT_DB" = "true" ]; then
 	service apache2 start
 	echo "Initializing database"

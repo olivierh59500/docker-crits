@@ -1,0 +1,91 @@
+#!/bin/bash
+
+source /etc/runit-envvars
+
+CMDLINE="`cat /etc/runit-commandline`"
+echo "Commandline: $CMDLINE"
+if [ "$CMDLINE" == "help" ]; then
+	echo "Print Help Here"
+	kill -TERM 1
+	sleep 60
+fi
+
+# if mongod service dir not exist and using internal mongod; then
+if [ ! -d /etc/service/mongo ]; then
+	if [ -z "" ]; then
+		echo "Using Internal MongoDB engine"
+		mv /etc/service/apache/mongo /etc/service/
+
+		while true; do
+			if pgrep mongod; then
+				echo "MongoDB engine started"
+				break;
+			fi
+			sleep 3
+		done
+		sleep 2
+
+		if [ -f /data/db/crits.0 ]; then
+			echo "Existing database detected"
+		else
+			echo .
+			echo "! ! ! NO DATABASE DETECTED  ! ! !"
+			echo "watch for account information below"
+			echo .
+			INIT_DB=true
+		fi
+	fi
+fi
+
+# if config files are not in place (first run)
+if [ -e /etc/apache2/sites-available/000-default.conf ]; then
+
+	a2dissite 000-default
+	rm /etc/apache2/sites-available/000-default.conf
+	rm /etc/apache2/sites-available/default-ssl.conf
+
+	#TODO: if HTTPS_ONLY
+		#cp /etc/service/apache/crits-redir.conf /etc/apache2/sites-available
+		#a2ensite crits-redir
+	#else
+		cp /etc/service/apache/crits.conf /etc/apache2/sites-available
+		a2ensite crits
+	#fi
+	#TODO: if HTTPS_ENABLED
+		cp /etc/service/apache/crits-ssl.conf /etc/apache2/sites-available
+		a2enmod ssl
+		a2ensite crits-ssl
+	#fi
+
+	ROTATE_SECRET_KEY=true
+else
+	echo "Restarting Apache with existing configuration..."
+fi
+
+if [ "$ROTATE_SECRET_KEY" = "true" ]; then
+	echo "Creating new Django SECRET_KEY"
+	SECRET_KEY="`dd bs=1 count=32 if=/dev/urandom 2> /dev/null | sha256sum - | cut -c1-64`"
+	sed -i -e "s/SECRET_KEY = '.*/SECRET_KEY = '$SECRET_KEY'/" /data/crits/crits/config/database.py
+fi
+
+if [ "$INIT_DB" = "true" ]; then
+	service apache2 start
+	echo "Initializing database"
+	sleep 3
+	echo "..."
+	python /data/crits/manage.py create_default_collections 2>&1
+	echo "..."
+	python /data/crits/manage.py setconfig allowed_hosts '*' 2>&1
+	echo "..."
+	#TODO: can we add a source and org here and add it to the below user?
+	python /data/crits/manage.py users -a -A -u admin -e crits@invalid.com -o Admins -f Default -l User 2>&1
+	cd /
+	service apache2 stop
+fi
+
+# if crontab specified
+	# copy crontab
+	# copy cron dir into service dir
+
+echo "Restarting Apache"
+exec /usr/sbin/apache2ctl -DFOREGROUND

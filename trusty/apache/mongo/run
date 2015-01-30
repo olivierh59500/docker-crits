@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+set -- mongod --logpath /var/log/mongodb.log --logappend --nohttpinterface
+
+numa='numactl --interleave=all'
+if $numa true &> /dev/null; then
+	set -- $numa "$@"
+fi
+
+echo "Starting MongoDB engine"
+exec "$@"

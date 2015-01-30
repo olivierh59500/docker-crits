@@ -7,5 +7,6 @@ specificially in [pnelson/docker-crits-docs/crits](https://github.com/pnelson/do
 
 This is a work in progress and should serve multiple purposes:
 
-1. Provide a useable docker container for [CRITs](https://github.com/crits/crits) in the Docker Registry
-1. Teach me how to use TravisCI and Stackbrew tools for automation
+1. Provide useable docker containers for [CRITs](https://github.com/crits/crits) in the Docker Registry
+1. Provide a chance to learn TravisCI and Stackbrew services for automation
+1. Provide a testbed for the ability to run CRITs on several architectures

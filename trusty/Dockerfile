@@ -13,6 +13,9 @@ EXPOSE 80 443
 # needed so runit will install correctly
 RUN touch /etc/inittab
 
+# for my environment only
+ADD 01proxy /etc/apt/apt.conf.d/
+
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
  && apt-get install -y \
@@ -83,24 +86,24 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ADD ushlex-0.99.tar.gz install_dependencies.sh /setup/
+
+# this seems to be an oddity missing in Ubuntu 14.04
+ADD ushlex-0.99.tar.gz /setup/
+RUN cd /setup/ushlex-0.99 \
+ && python ./setup.py install
+
+ADD install_dependencies.sh /setup/
 
 # download, install, and cleanup the things in crits_dependencies repo
 RUN export DEBIAN_FRONTEND=noninteractive \
- && apt-get update \
  && cd /setup \
  && git clone https://github.com/crits/crits_dependencies \
  && cd /setup/crits_dependencies \
- # use OUR install_dependencies.sh, not git's
+ && apt-get update \
  && ../install_dependencies.sh \
  && cd / \
  && rm -r /setup/crits_dependencies \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# this seems to be an oddity missing in Ubuntu 14.04
-RUN cd /setup \
- && cd /setup/ushlex-0.99 \
- && python ./setup.py install
 
 # download the main repository and plugin repository from github
 RUN cd /setup \
@@ -126,7 +129,7 @@ RUN useradd crits -G www-data && chgrp -R crits /data/crits \
 # the apache2 run script takes care of starting mongo and cron first if needed
 ADD apache/ /etc/service/apache/
 ADD runit_bootstrap /usr/sbin/
-RUN chmod +x /etc/service/apache/run /etc/service/apache/mongo/run /etc/service/apache/cron/run /usr/sbin/runit_bootstrap
+RUN chmod +x /etc/service/apache/run /etc/service/apache/mongo/run /usr/sbin/runit_bootstrap
 
 ENTRYPOINT ["/usr/sbin/runit_bootstrap"]
 #CMD ["help"]

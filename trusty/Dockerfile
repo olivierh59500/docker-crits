@@ -97,7 +97,7 @@ ADD install_dependencies.sh /setup/
 # download, install, and cleanup the things in crits_dependencies repo
 RUN export DEBIAN_FRONTEND=noninteractive \
  && cd /setup \
- && git clone https://github.com/crits/crits_dependencies \
+ && git clone --depth=1 https://github.com/crits/crits_dependencies \
  && cd /setup/crits_dependencies \
  && apt-get update \
  && ../install_dependencies.sh \
@@ -108,23 +108,18 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 # download the main repository and plugin repository from github
 RUN cd /setup \
 # TODO: download tarballs from github instead of clone (can also remove git install above then)
- && git clone https://github.com/crits/crits_services \
- && rm -r crits_services/.git \
+ && git clone --depth=1 https://github.com/crits/crits_services \
  && cd /data \
- && git clone https://github.com/crits/crits
-#TODO: figure out how to delete git structure in crits without webapp complaining
+ && git clone --depth=1 https://github.com/crits/crits
 
-#TODO: install appropriate services
-
-RUN mkdir -p /data/db /data/crits/crits/logs /data/service \
-#TODO: figure out which crits.log is actually used
- && touch /data/crits/logs/crits.log /data/crits/crits/logs/crits.log \
+RUN mkdir -p /data/db /data/service \
+ && useradd crits -G www-data \
+ && touch /data/crits/logs/crits.log \
+ && chmod 664 /data/crits/logs/crits.log \
+ && chown -R www-data:crits /data/crits \
  && cp /data/crits/crits/config/database_example.py /data/crits/crits/config/database.py
 
-# adjust users and permissions
-RUN useradd crits -G www-data && chgrp -R crits /data/crits \
- && chmod 664 /data/crits/logs/crits.log \
- && chown -R www-data /data/crits
+#TODO: install appropriate services
 
 # the apache2 run script takes care of starting mongo and cron first if needed
 ADD apache/ /etc/service/apache/
